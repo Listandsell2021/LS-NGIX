@@ -6,6 +6,7 @@ import StatusBadge from '../components/StatusBadge';
 import TerminalOutput from '../components/TerminalOutput';
 import EnvEditor from '../components/EnvEditor';
 import WebTerminal from '../components/WebTerminal';
+import FileManager from '../components/FileManager';
 
 interface App {
   id: string;
@@ -71,7 +72,7 @@ export default function AppDetail() {
   const [enablingSsl, setEnablingSsl] = useState<number | null>(null);
 
   // Active tab
-  const [tab, setTab] = useState<'deployments' | 'domains' | 'logs' | 'env' | 'terminal'>('deployments');
+  const [tab, setTab] = useState<'deployments' | 'domains' | 'files' | 'terminal' | 'logs' | 'env'>('deployments');
 
   async function fetchApp() {
     try {
@@ -319,7 +320,7 @@ export default function AppDetail() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4 border-b border-gray-800">
-        {(['deployments', 'domains', 'terminal', 'logs', 'env'] as const).map((t) => (
+        {(['deployments', 'domains', 'files', 'terminal', 'logs', 'env'] as const).map((t) => (
           <button
             key={t}
             onClick={() => {
@@ -333,7 +334,7 @@ export default function AppDetail() {
             }`}
           >
             {t === 'terminal' && <TerminalSquare size={14} />}
-            {t === 'deployments' ? 'Deployments' : t === 'domains' ? 'Domains' : t === 'terminal' ? 'Terminal' : t === 'logs' ? 'PM2 Logs' : 'Environment'}
+            {t === 'deployments' ? 'Deployments' : t === 'domains' ? 'Domains' : t === 'files' ? 'Files' : t === 'terminal' ? 'Terminal' : t === 'logs' ? 'PM2 Logs' : 'Environment'}
           </button>
         ))}
       </div>
@@ -480,6 +481,14 @@ export default function AppDetail() {
             <p>3. Click <span className="text-green-400">Enable SSL</span> to get a free Let's Encrypt HTTPS certificate</p>
             <p>4. Your app is now live at <span className="text-white">https://yourdomain.com</span></p>
           </div>
+        </div>
+      )}
+
+      {/* Files Tab */}
+      {tab === 'files' && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <h3 className="text-lg font-semibold mb-4">File Manager</h3>
+          <FileManager appId={id!} />
         </div>
       )}
 

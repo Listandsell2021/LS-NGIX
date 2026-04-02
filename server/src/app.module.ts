@@ -16,6 +16,7 @@ import { EnvVarsModule } from './env-vars/env-vars.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { LogsModule } from './logs/logs.module';
 import { SshKeysModule } from './ssh-keys/ssh-keys.module';
+import { FilesModule } from './files/files.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { SshKeysModule } from './ssh-keys/ssh-keys.module';
     MonitoringModule,
     LogsModule,
     SshKeysModule,
+    FilesModule,
   ],
   providers: [
     {
