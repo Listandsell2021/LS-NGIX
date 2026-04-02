@@ -1,0 +1,13 @@
+{
+  "name": "ls-ngix",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted VPS management panel for Node.js applications",
+  "scripts": {
+    "dev:server": "cd server && npm run start:dev",
+    "dev:client": "cd client && npm run dev",
+    "build:server": "cd server && npm run build",
+    "build:client": "cd client && npm run build",
+    "build": "npm run build:client && npm run build:server"
+  }
+}
