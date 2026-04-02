@@ -22,7 +22,8 @@ const DANGEROUS_CHARS = /[;&|`$(){}!<>\\]/;
 @ValidatorConstraint({ name: 'isSafeCommand', async: false })
 export class IsSafeCommandConstraint implements ValidatorConstraintInterface {
   validate(value: string): boolean {
-    if (!value || typeof value !== 'string') return false;
+    if (typeof value !== 'string') return false;
+    if (value === '') return true; // allow empty = skip this step
 
     // Check for dangerous characters (shell metacharacters)
     if (DANGEROUS_CHARS.test(value)) return false;

@@ -93,22 +93,30 @@ export class DeploymentsService {
       });
 
       // Install
-      await this.updateStatus(deploymentId, DeploymentStatus.INSTALLING);
-      const installParts = app.installCommand.split(' ');
-      await this.appendLog(deploymentId, `\n> ${app.installCommand}\n`);
-      await safeSpawn(installParts[0], installParts.slice(1), {
-        cwd: appDir,
-        onOutput: (line) => this.appendLog(deploymentId, line),
-      });
+      if (app.installCommand) {
+        await this.updateStatus(deploymentId, DeploymentStatus.INSTALLING);
+        const installParts = app.installCommand.split(' ');
+        await this.appendLog(deploymentId, `\n> ${app.installCommand}\n`);
+        await safeSpawn(installParts[0], installParts.slice(1), {
+          cwd: appDir,
+          onOutput: (line) => this.appendLog(deploymentId, line),
+        });
+      } else {
+        await this.appendLog(deploymentId, '\n> Skipping install (no command configured)\n');
+      }
 
       // Build
-      await this.updateStatus(deploymentId, DeploymentStatus.BUILDING);
-      const buildParts = app.buildCommand.split(' ');
-      await this.appendLog(deploymentId, `\n> ${app.buildCommand}\n`);
-      await safeSpawn(buildParts[0], buildParts.slice(1), {
-        cwd: appDir,
-        onOutput: (line) => this.appendLog(deploymentId, line),
-      });
+      if (app.buildCommand) {
+        await this.updateStatus(deploymentId, DeploymentStatus.BUILDING);
+        const buildParts = app.buildCommand.split(' ');
+        await this.appendLog(deploymentId, `\n> ${app.buildCommand}\n`);
+        await safeSpawn(buildParts[0], buildParts.slice(1), {
+          cwd: appDir,
+          onOutput: (line) => this.appendLog(deploymentId, line),
+        });
+      } else {
+        await this.appendLog(deploymentId, '\n> Skipping build (no command configured)\n');
+      }
 
       // Start via PM2
       await this.updateStatus(deploymentId, DeploymentStatus.STARTING);
