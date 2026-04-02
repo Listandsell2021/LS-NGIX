@@ -37,6 +37,9 @@ if ! command -v node &>/dev/null; then
 fi
 echo "  Node.js $(node --version)"
 
+# Install build tools (needed for bcrypt, better-sqlite3 native modules)
+apt-get install -y build-essential python3
+
 # ─── 4. INSTALL PM2 ────────────────────────────────
 echo "[4/9] Installing PM2..."
 npm install -g pm2
