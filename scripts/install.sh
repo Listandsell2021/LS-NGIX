@@ -122,8 +122,25 @@ chmod 440 /etc/sudoers.d/ls-ngix
 
 # ─── 9. START PANEL ────────────────────────────────
 echo "[9/9] Starting LS-NGIX Panel..."
-su - ls-ngix -c "cd $INSTALL_DIR/panel && NODE_ENV=production pm2 delete ls-ngix-panel 2>/dev/null || true"
-su - ls-ngix -c "cd $INSTALL_DIR/panel && NODE_ENV=production pm2 start server/dist/main.js --name ls-ngix-panel"
+su - ls-ngix -c "pm2 delete ls-ngix-panel 2>/dev/null || true"
+
+# Create PM2 ecosystem file with environment variables
+cat > "$INSTALL_DIR/panel/ecosystem.config.js" <<ECOSYSTEM
+module.exports = {
+  apps: [{
+    name: 'ls-ngix-panel',
+    script: 'server/dist/main.js',
+    cwd: '$INSTALL_DIR/panel',
+    env: {
+      NODE_ENV: 'production',
+      APPS_DIR: '$INSTALL_DIR/apps',
+    },
+  }],
+};
+ECOSYSTEM
+chown ls-ngix:ls-ngix "$INSTALL_DIR/panel/ecosystem.config.js"
+
+su - ls-ngix -c "cd $INSTALL_DIR/panel && pm2 start ecosystem.config.js"
 su - ls-ngix -c "pm2 save"
 
 cat > /etc/nginx/sites-available/ls-ngix-panel <<'NGINX'

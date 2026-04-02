@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Key, Plus, Trash2, Copy, Check } from 'lucide-react';
 import api from '../api/client';
+import { copyToClipboard as copyText } from '../lib/utils';
 
 interface SshKeyEntry {
   id: number;
@@ -44,8 +45,8 @@ export default function SshKeys() {
     fetchKeys();
   }
 
-  function copyToClipboard(text: string) {
-    navigator.clipboard.writeText(text);
+  function handleCopy(text: string) {
+    copyText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -82,7 +83,7 @@ export default function SshKeys() {
             <div className="flex gap-2">
               <code className="flex-1 bg-black p-3 rounded text-xs text-green-300 font-mono break-all">{newKey.publicKey}</code>
               <button
-                onClick={() => copyToClipboard(newKey.publicKey)}
+                onClick={() => handleCopy(newKey.publicKey)}
                 className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm text-gray-300"
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -113,7 +114,7 @@ export default function SshKeys() {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => copyToClipboard(k.publicKey)}
+                    onClick={() => handleCopy(k.publicKey)}
                     className="px-2 py-1 text-gray-400 hover:text-white"
                   >
                     <Copy size={14} />

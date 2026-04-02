@@ -2,6 +2,7 @@ import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Copy, Check, Key, Loader2 } from 'lucide-react';
 import api from '../api/client';
+import { copyToClipboard } from '../lib/utils';
 
 export default function AppCreate() {
   const navigate = useNavigate();
@@ -58,8 +59,8 @@ export default function AppCreate() {
     }
   }
 
-  function copyToClipboard() {
-    navigator.clipboard.writeText(publicKey);
+  function handleCopy() {
+    copyToClipboard(publicKey);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -180,7 +181,7 @@ export default function AppCreate() {
                 </code>
                 <button
                   type="button"
-                  onClick={copyToClipboard}
+                  onClick={handleCopy}
                   className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 self-start"
                 >
                   {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
