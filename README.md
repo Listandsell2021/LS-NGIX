@@ -5,7 +5,7 @@ Self-hosted, security-hardened VPS management panel for deploying and managing N
 ## Quick Install (Ubuntu 22.04/24.04)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USER/LS-NGIX/main/scripts/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Listandsell2021/LS-NGIX/main/scripts/install.sh | sudo bash
 ```
 
 ## Development

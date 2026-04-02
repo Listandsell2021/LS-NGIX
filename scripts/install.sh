@@ -91,7 +91,7 @@ if [ -d "$INSTALL_DIR/panel" ]; then
   echo "  Updating existing installation..."
   cd "$INSTALL_DIR/panel" && git pull
 else
-  git clone https://github.com/YOUR_USERNAME/LS-NGIX.git "$INSTALL_DIR/panel"
+  git clone https://github.com/Listandsell2021/LS-NGIX.git "$INSTALL_DIR/panel"
 fi
 
 chown -R ls-ngix:ls-ngix "$INSTALL_DIR"
