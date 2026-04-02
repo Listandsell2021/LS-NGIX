@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Rocket, Play, Square, RotateCcw, Activity, Globe, Lock, Plus, X, TerminalSquare } from 'lucide-react';
+import { ArrowLeft, Trash2, Rocket, Play, Square, RotateCcw, Activity, Globe, Lock, Plus, X, TerminalSquare, Pencil, Save, ChevronDown, Loader2, GitBranch } from 'lucide-react';
 import api from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 import TerminalOutput from '../components/TerminalOutput';
@@ -70,6 +70,13 @@ export default function AppDetail() {
   const [domainError, setDomainError] = useState('');
   const [sslEmail, setSslEmail] = useState('');
   const [enablingSsl, setEnablingSsl] = useState<number | null>(null);
+
+  // Configuration editing
+  const [editingConfig, setEditingConfig] = useState(false);
+  const [configForm, setConfigForm] = useState({ gitBranch: '', installCommand: '', buildCommand: '', startCommand: '', port: 0 });
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [branches, setBranches] = useState<string[]>([]);
+  const [fetchingBranches, setFetchingBranches] = useState(false);
 
   // Active tab
   const [tab, setTab] = useState<'deployments' | 'domains' | 'files' | 'terminal' | 'logs' | 'env'>('deployments');
@@ -199,6 +206,41 @@ export default function AppDetail() {
     }
   }
 
+  function startEditConfig() {
+    if (!app) return;
+    setConfigForm({
+      gitBranch: app.gitBranch,
+      installCommand: app.installCommand,
+      buildCommand: app.buildCommand,
+      startCommand: app.startCommand,
+      port: app.port,
+    });
+    setEditingConfig(true);
+    fetchBranches();
+  }
+
+  async function saveConfig() {
+    if (!app) return;
+    setSavingConfig(true);
+    try {
+      const { data } = await api.patch(`/apps/${id}`, configForm);
+      setApp(data);
+      setEditingConfig(false);
+    } catch {}
+    setSavingConfig(false);
+  }
+
+  async function fetchBranches() {
+    setFetchingBranches(true);
+    try {
+      const { data } = await api.get(`/apps/${id}/branches`);
+      setBranches(data.branches);
+    } catch {
+      setBranches([]);
+    }
+    setFetchingBranches(false);
+  }
+
   async function deleteApp() {
     if (!confirm(`Delete "${app?.name}"? This cannot be undone.`)) return;
     await api.delete(`/apps/${id}`);
@@ -307,15 +349,128 @@ export default function AppDetail() {
 
       {/* Configuration */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-        <h3 className="text-lg font-semibold mb-4">Configuration</h3>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div><span className="text-gray-500">Git URL</span><p className="text-white font-mono mt-1 break-all">{app.gitUrl}</p></div>
-          <div><span className="text-gray-500">Branch</span><p className="text-white font-mono mt-1">{app.gitBranch}</p></div>
-          <div><span className="text-gray-500">Install</span><p className="text-white font-mono mt-1">{app.installCommand}</p></div>
-          <div><span className="text-gray-500">Build</span><p className="text-white font-mono mt-1">{app.buildCommand}</p></div>
-          <div><span className="text-gray-500">Start</span><p className="text-white font-mono mt-1">{app.startCommand}</p></div>
-          <div><span className="text-gray-500">Port</span><p className="text-white font-mono mt-1">{app.port}</p></div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Configuration</h3>
+          {!editingConfig ? (
+            <button
+              onClick={startEditConfig}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs text-gray-300 transition-colors"
+            >
+              <Pencil size={13} /> Edit
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditingConfig(false)}
+                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs text-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveConfig}
+                disabled={savingConfig}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg text-xs text-white transition-colors"
+              >
+                <Save size={13} /> {savingConfig ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          )}
         </div>
+
+        {!editingConfig ? (
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div><span className="text-gray-500">Git URL</span><p className="text-white font-mono mt-1 break-all">{app.gitUrl}</p></div>
+            <div><span className="text-gray-500">Branch</span><p className="text-white font-mono mt-1">{app.gitBranch}</p></div>
+            <div><span className="text-gray-500">Install</span><p className="text-white font-mono mt-1">{app.installCommand}</p></div>
+            <div><span className="text-gray-500">Build</span><p className="text-white font-mono mt-1">{app.buildCommand}</p></div>
+            <div><span className="text-gray-500">Start</span><p className="text-white font-mono mt-1">{app.startCommand}</p></div>
+            <div><span className="text-gray-500">Port</span><p className="text-white font-mono mt-1">{app.port}</p></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-gray-500">Git URL</span>
+              <p className="text-white font-mono mt-1 break-all opacity-60">{app.gitUrl}</p>
+              <p className="text-xs text-gray-600 mt-1">Cannot be changed after creation</p>
+            </div>
+            <div>
+              <label className="text-gray-500 block mb-1">Branch</label>
+              <div className="flex gap-2">
+                {branches.length > 0 ? (
+                  <div className="relative flex-1">
+                    <select
+                      value={configForm.gitBranch}
+                      onChange={(e) => setConfigForm({ ...configForm, gitBranch: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:border-blue-500 appearance-none pr-8"
+                    >
+                      {branches.map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                      {!branches.includes(configForm.gitBranch) && (
+                        <option value={configForm.gitBranch}>{configForm.gitBranch}</option>
+                      )}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={configForm.gitBranch}
+                    onChange={(e) => setConfigForm({ ...configForm, gitBranch: e.target.value })}
+                    className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:border-blue-500"
+                  />
+                )}
+                <button
+                  onClick={fetchBranches}
+                  disabled={fetchingBranches}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 rounded-lg text-xs text-gray-400 transition-colors whitespace-nowrap"
+                  title="Fetch branches from remote"
+                >
+                  {fetchingBranches ? <Loader2 size={13} className="animate-spin" /> : <GitBranch size={13} />}
+                  Fetch
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="text-gray-500 block mb-1">Install</label>
+              <input
+                type="text"
+                value={configForm.installCommand}
+                onChange={(e) => setConfigForm({ ...configForm, installCommand: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-gray-500 block mb-1">Build</label>
+              <input
+                type="text"
+                value={configForm.buildCommand}
+                onChange={(e) => setConfigForm({ ...configForm, buildCommand: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-gray-500 block mb-1">Start</label>
+              <input
+                type="text"
+                value={configForm.startCommand}
+                onChange={(e) => setConfigForm({ ...configForm, startCommand: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-gray-500 block mb-1">Port</label>
+              <input
+                type="number"
+                value={configForm.port}
+                onChange={(e) => setConfigForm({ ...configForm, port: Number(e.target.value) })}
+                min={1024}
+                max={65535}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
