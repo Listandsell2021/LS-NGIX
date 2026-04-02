@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Rocket, Play, Square, RotateCcw, Activity, Globe, Lock, Plus, X, TerminalSquare, Pencil, Save, ChevronDown, Loader2, GitBranch } from 'lucide-react';
+import { ArrowLeft, Trash2, Rocket, Play, Square, RotateCcw, Activity, Globe, Lock, Plus, X, TerminalSquare, Pencil, Save, ChevronDown, Loader2, GitBranch, Send } from 'lucide-react';
 import api from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 import TerminalOutput from '../components/TerminalOutput';
 import EnvEditor from '../components/EnvEditor';
-import WebTerminal from '../components/WebTerminal';
 import FileManager from '../components/FileManager';
 
 interface App {
@@ -77,6 +76,11 @@ export default function AppDetail() {
   const [savingConfig, setSavingConfig] = useState(false);
   const [branches, setBranches] = useState<string[]>([]);
   const [fetchingBranches, setFetchingBranches] = useState(false);
+
+  // Command runner
+  const [cmdInput, setCmdInput] = useState('');
+  const [cmdOutput, setCmdOutput] = useState('');
+  const [cmdRunning, setCmdRunning] = useState(false);
 
   // Active tab
   const [tab, setTab] = useState<'deployments' | 'domains' | 'files' | 'terminal' | 'logs' | 'env'>('deployments');
@@ -228,6 +232,21 @@ export default function AppDetail() {
       setEditingConfig(false);
     } catch {}
     setSavingConfig(false);
+  }
+
+  async function runCommand(cmd?: string) {
+    const command = cmd || cmdInput;
+    if (!command || !app) return;
+    setCmdRunning(true);
+    setCmdOutput((prev) => prev + `\n$ ${command}\n`);
+    try {
+      const { data } = await api.post(`/apps/${app.slug}/process/run-command`, { command });
+      setCmdOutput((prev) => prev + (data.output || '(no output)') + '\n');
+    } catch (err: any) {
+      setCmdOutput((prev) => prev + (err.response?.data?.message || 'Error running command') + '\n');
+    }
+    setCmdRunning(false);
+    if (!cmd) setCmdInput('');
   }
 
   async function fetchBranches() {
@@ -489,7 +508,7 @@ export default function AppDetail() {
             }`}
           >
             {t === 'terminal' && <TerminalSquare size={14} />}
-            {t === 'deployments' ? 'Deployments' : t === 'domains' ? 'Domains' : t === 'files' ? 'Files' : t === 'terminal' ? 'Terminal' : t === 'logs' ? 'PM2 Logs' : 'Environment'}
+            {t === 'deployments' ? 'Deployments' : t === 'domains' ? 'Domains' : t === 'files' ? 'Files' : t === 'terminal' ? 'Run Commands' : t === 'logs' ? 'PM2 Logs' : 'Environment'}
           </button>
         ))}
       </div>
@@ -647,11 +666,59 @@ export default function AppDetail() {
         </div>
       )}
 
-      {/* Terminal Tab */}
+      {/* Run Commands Tab */}
       {tab === 'terminal' && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Web Terminal</h3>
-          <WebTerminal appSlug={app.slug} />
+          <h3 className="text-lg font-semibold mb-2">Run Node.js Commands</h3>
+          <p className="text-sm text-gray-400 mb-4">
+            Run commands in your app's directory. Allowed: npm, npx, node, yarn, pnpm, git, ls.
+          </p>
+
+          {/* Quick action buttons */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button onClick={() => runCommand('npm install')} disabled={cmdRunning} className="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 disabled:opacity-50 rounded-lg text-xs text-blue-400 transition-colors">npm install</button>
+            <button onClick={() => runCommand('npm run build')} disabled={cmdRunning} className="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 disabled:opacity-50 rounded-lg text-xs text-blue-400 transition-colors">npm run build</button>
+            <button onClick={() => runCommand('npm start')} disabled={cmdRunning} className="px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 disabled:opacity-50 rounded-lg text-xs text-green-400 transition-colors">npm start</button>
+            <button onClick={() => { processControl('restart'); setCmdOutput((p) => p + '\n$ pm2 restart\nRestarting...\n'); }} disabled={!!processAction} className="px-3 py-1.5 bg-yellow-600/20 hover:bg-yellow-600/30 disabled:opacity-50 rounded-lg text-xs text-yellow-400 transition-colors flex items-center gap-1"><RotateCcw size={12} /> Restart App</button>
+            <button onClick={() => runCommand('git status')} disabled={cmdRunning} className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 rounded-lg text-xs text-gray-300 transition-colors">git status</button>
+            <button onClick={() => runCommand('ls -la')} disabled={cmdRunning} className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 rounded-lg text-xs text-gray-300 transition-colors">ls -la</button>
+          </div>
+
+          {/* Command input */}
+          <div className="flex gap-2 mb-4">
+            <input
+              type="text"
+              value={cmdInput}
+              onChange={(e) => setCmdInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !cmdRunning && runCommand()}
+              placeholder="npm install express"
+              className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:border-blue-500"
+              disabled={cmdRunning}
+            />
+            <button
+              onClick={() => runCommand()}
+              disabled={cmdRunning || !cmdInput}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg text-sm font-medium text-white transition-colors"
+            >
+              {cmdRunning ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              {cmdRunning ? 'Running...' : 'Run'}
+            </button>
+          </div>
+
+          {/* Output */}
+          <div className="relative">
+            {cmdOutput && (
+              <button
+                onClick={() => setCmdOutput('')}
+                className="absolute top-2 right-2 px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-gray-400 transition-colors z-10"
+              >
+                Clear
+              </button>
+            )}
+            <pre className="bg-black/50 border border-gray-800 rounded-lg p-4 text-sm font-mono text-gray-300 min-h-[200px] max-h-[400px] overflow-auto whitespace-pre-wrap">
+              {cmdOutput || 'Output will appear here...'}
+            </pre>
+          </div>
         </div>
       )}
 

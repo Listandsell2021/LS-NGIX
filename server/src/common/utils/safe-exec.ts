@@ -19,6 +19,8 @@ const ALLOWED_COMMANDS = new Set([
   'df',
   'pm2',
   'ssh-keygen',
+  'ls',
+  'cat',
 ]);
 
 export interface ExecResult {
