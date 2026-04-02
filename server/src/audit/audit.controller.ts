@@ -1,10 +1,9 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/auth.guard';
 import { AuditService } from './audit.service';
 
-// NOTE: JwtAuthGuard will be added in Task 5 when auth module exists.
-// For now, the controller has no guard — it will be updated in Task 5.
-
 @Controller('audit')
+@UseGuards(JwtAuthGuard)
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
