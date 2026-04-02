@@ -16,15 +16,16 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
-  const isProduction = process.env.NODE_ENV === 'production';
-
-  // Security headers — relaxed for HTTP, strict for HTTPS
+  // Security headers — Nginx handles these in production,
+  // helmet only adds X-XSS-Protection, X-Content-Type-Options etc.
+  // All cross-origin policies disabled to work on plain HTTP.
   app.use(helmet({
-    contentSecurityPolicy: false, // Let the SPA work without CSP issues
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: false,
     crossOriginResourcePolicy: false,
-    hsts: isProduction, // Only set HSTS when behind HTTPS
+    originAgentCluster: false,
+    hsts: false,
   }));
 
   // Parse cookies for httpOnly refresh tokens
