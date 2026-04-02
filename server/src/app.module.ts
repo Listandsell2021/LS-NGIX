@@ -6,6 +6,8 @@ import { join } from 'path';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { AppsModule } from './apps/apps.module';
+import { DeploymentsModule } from './deployments/deployments.module';
+import { ProcessManagerModule } from './process-manager/process-manager.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { AppsModule } from './apps/apps.module';
     AuditModule,
     AuthModule,
     AppsModule,
+    DeploymentsModule,
+    ProcessManagerModule,
   ],
   providers: [
     {
