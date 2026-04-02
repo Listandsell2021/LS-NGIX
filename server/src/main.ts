@@ -1,7 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import helmet from 'helmet';
-import cookieParser from 'cookie-parser';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const helmet = require('helmet');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const cookieParser = require('cookie-parser');
 import { AppModule } from './app.module';
 import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
