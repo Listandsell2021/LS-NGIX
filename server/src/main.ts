@@ -16,8 +16,16 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
-  // Security headers (X-Frame-Options, CSP, HSTS, etc.)
-  app.use(helmet());
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Security headers — relaxed for HTTP, strict for HTTPS
+  app.use(helmet({
+    contentSecurityPolicy: false, // Let the SPA work without CSP issues
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginResourcePolicy: false,
+    hsts: isProduction, // Only set HSTS when behind HTTPS
+  }));
 
   // Parse cookies for httpOnly refresh tokens
   app.use(cookieParser());
@@ -33,10 +41,9 @@ async function bootstrap() {
     }),
   );
 
-  // CORS: only allow panel's own origin
-  const allowedOrigin = process.env.PANEL_URL || 'http://localhost:5173';
+  // CORS: allow same-origin (served from NestJS) + dev server
   app.enableCors({
-    origin: allowedOrigin,
+    origin: true, // Allow all origins (panel is same-origin in production)
     credentials: true,
   });
 
