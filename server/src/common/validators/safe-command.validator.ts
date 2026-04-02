@@ -8,8 +8,10 @@ import {
 // Only these prefixes are allowed for user-specified commands
 const ALLOWED_PREFIXES = [
   'npm run',
+  'npm start',
   'npm install',
   'npm ci',
+  'npm test',
   'npx',
   'yarn',
   'pnpm',
