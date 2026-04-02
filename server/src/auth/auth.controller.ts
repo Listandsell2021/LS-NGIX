@@ -41,17 +41,18 @@ export class AuthController {
     const { access_token } = await this.authService.refresh(refreshToken);
     res.cookie('access_token', access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: false,
+      sameSite: 'lax',
       maxAge: 15 * 60 * 1000,
+      path: '/',
     });
     return { message: 'Token refreshed' };
   }
 
   @Post('logout')
   async logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
+    res.clearCookie('access_token', { path: '/' });
+    res.clearCookie('refresh_token', { path: '/' });
     return { message: 'Logged out' };
   }
 
@@ -59,21 +60,24 @@ export class AuthController {
     res: Response,
     tokens: { access_token: string; refresh_token: string },
   ) {
-    const isProduction = process.env.NODE_ENV === 'production';
+    // Use lax sameSite and path '/' so cookies work on HTTP with IP addresses.
+    // When SSL is enabled, switch to secure: true and sameSite: 'strict'.
+    const secure = process.env.NODE_ENV === 'production' && process.env.SSL_ENABLED === 'true';
 
     res.cookie('access_token', tokens.access_token, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: 'strict',
+      secure,
+      sameSite: 'lax',
       maxAge: 15 * 60 * 1000,
+      path: '/',
     });
 
     res.cookie('refresh_token', tokens.refresh_token, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: 'strict',
+      secure,
+      sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/api/auth',
+      path: '/',
     });
   }
 }
