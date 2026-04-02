@@ -130,8 +130,21 @@ export class DeploymentsService {
       });
 
       // Start new process
+      // For "npm start" / "npm run X" → pm2 start npm --name X --cwd Y -- start / run X
+      // For "node server.js" → pm2 start server.js --name X --cwd Y
       const startParts = app.startCommand.split(' ');
-      await safeSpawn('npx', ['pm2', 'start', startParts[startParts.length - 1], '--name', app.slug, '--cwd', appDir], {
+      let pm2Args: string[];
+
+      if (['npm', 'npx', 'yarn', 'pnpm'].includes(startParts[0])) {
+        pm2Args = ['pm2', 'start', startParts[0], '--name', app.slug, '--cwd', appDir, '--', ...startParts.slice(1)];
+      } else if (startParts[0] === 'node') {
+        pm2Args = ['pm2', 'start', ...startParts.slice(1), '--name', app.slug, '--cwd', appDir];
+      } else {
+        pm2Args = ['pm2', 'start', startParts[startParts.length - 1], '--name', app.slug, '--cwd', appDir];
+      }
+
+      await this.appendLog(deploymentId, `> npx ${pm2Args.join(' ')}\n`);
+      await safeSpawn('npx', pm2Args, {
         cwd: appDir,
         onOutput: (line) => this.appendLog(deploymentId, line),
       });
