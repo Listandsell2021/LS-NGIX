@@ -1,23 +1,33 @@
 import { useState, FormEvent } from 'react';
 
 interface SetupProps {
-  onSetup: (username: string, password: string) => Promise<void>;
+  onSetup: (data: { name: string; username: string; email: string; password: string }) => Promise<void>;
 }
 
 export default function Setup({ onSetup }: SetupProps) {
+  const [name, setName] = useState('');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
     setLoading(true);
     try {
-      await onSetup(username, password);
+      await onSetup({ name, username, email, password });
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Setup failed');
+      const msg = err.response?.data?.message;
+      setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Setup failed');
     } finally {
       setLoading(false);
     }
@@ -35,15 +45,39 @@ export default function Setup({ onSetup }: SetupProps) {
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
+            <label className="block text-sm text-gray-300 mb-1">Full Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="John Doe"
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              required
+            />
+          </div>
+          <div>
             <label className="block text-sm text-gray-300 mb-1">Username</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              placeholder="admin"
               className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
               required
               minLength={3}
             />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@example.com"
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">Used for SSL certificate notifications</p>
           </div>
           <div>
             <label className="block text-sm text-gray-300 mb-1">Password</label>
@@ -56,6 +90,17 @@ export default function Setup({ onSetup }: SetupProps) {
               minLength={12}
             />
             <p className="text-xs text-gray-500 mt-1">Min 12 chars, must include number + special character</p>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Confirm Password</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              required
+              minLength={12}
+            />
           </div>
           <button
             type="submit"

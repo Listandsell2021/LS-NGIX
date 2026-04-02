@@ -1,6 +1,11 @@
-import { IsString, MinLength, MaxLength, Matches } from 'class-validator';
+import { IsString, IsEmail, MinLength, MaxLength, Matches } from 'class-validator';
 
 export class SetupDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  name: string;
+
   @IsString()
   @MinLength(3)
   @MaxLength(50)
@@ -8,6 +13,9 @@ export class SetupDto {
     message: 'Username can only contain letters, numbers, hyphens, underscores',
   })
   username: string;
+
+  @IsEmail({}, { message: 'Please enter a valid email address' })
+  email: string;
 
   @IsString()
   @MinLength(12, { message: 'Password must be at least 12 characters' })
