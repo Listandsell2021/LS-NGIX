@@ -8,6 +8,11 @@ import { AuthModule } from './auth/auth.module';
 import { AppsModule } from './apps/apps.module';
 import { DeploymentsModule } from './deployments/deployments.module';
 import { ProcessManagerModule } from './process-manager/process-manager.module';
+import { NginxModule } from './nginx/nginx.module';
+import { DomainsModule } from './domains/domains.module';
+import { EnvVarsModule } from './env-vars/env-vars.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
+import { LogsModule } from './logs/logs.module';
 
 @Module({
   imports: [
@@ -26,6 +31,11 @@ import { ProcessManagerModule } from './process-manager/process-manager.module';
     AppsModule,
     DeploymentsModule,
     ProcessManagerModule,
+    NginxModule,
+    DomainsModule,
+    EnvVarsModule,
+    MonitoringModule,
+    LogsModule,
   ],
   providers: [
     {
