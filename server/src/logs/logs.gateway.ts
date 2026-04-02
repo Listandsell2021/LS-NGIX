@@ -9,8 +9,9 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../auth/auth.service';
-import { safeSpawn } from '../common/utils/safe-exec';
 import { ChildProcess, spawn } from 'child_process';
+import { existsSync } from 'fs';
+import { join } from 'path';
 
 @WebSocketGateway({
   cors: { origin: '*' },
@@ -22,6 +23,7 @@ export class LogsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly logger = new Logger(LogsGateway.name);
   private activeStreams = new Map<string, ChildProcess>();
+  private activeTerminals = new Map<string, ChildProcess>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -29,7 +31,6 @@ export class LogsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {}
 
   async handleConnection(client: Socket) {
-    // Verify JWT on WebSocket connection
     const token = client.handshake.auth?.token ||
       client.handshake.headers?.cookie?.match(/access_token=([^;]+)/)?.[1];
 
@@ -46,6 +47,8 @@ export class LogsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.disconnect();
     }
   }
+
+  // ─── PM2 Log Streaming ───────────────────────────
 
   @SubscribeMessage('subscribe-logs')
   handleSubscribe(client: Socket, payload: { appSlug: string }) {
@@ -78,8 +81,86 @@ export class LogsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.killStream(client.id);
   }
 
+  // ─── Interactive Terminal ─────────────────────────
+
+  @SubscribeMessage('terminal-start')
+  handleTerminalStart(client: Socket, payload: { appSlug?: string; cols?: number; rows?: number }) {
+    this.logger.log(`Client ${client.id} starting terminal session`);
+
+    this.killTerminal(client.id);
+
+    // Determine working directory
+    const appsDir = process.env.APPS_DIR || join(__dirname, '..', '..', 'managed-apps');
+    let cwd = appsDir;
+
+    if (payload.appSlug) {
+      const appDir = join(appsDir, payload.appSlug, 'source');
+      if (existsSync(appDir)) {
+        cwd = appDir;
+      }
+    }
+
+    const shell = process.env.SHELL || '/bin/bash';
+    const cols = payload.cols || 80;
+    const rows = payload.rows || 24;
+
+    const child = spawn(shell, ['-l'], {
+      cwd,
+      env: {
+        ...process.env,
+        TERM: 'xterm-256color',
+        COLUMNS: String(cols),
+        LINES: String(rows),
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    this.activeTerminals.set(client.id, child);
+
+    child.stdout.on('data', (data: Buffer) => {
+      client.emit('terminal-output', data.toString());
+    });
+
+    child.stderr.on('data', (data: Buffer) => {
+      client.emit('terminal-output', data.toString());
+    });
+
+    child.on('close', (code) => {
+      this.activeTerminals.delete(client.id);
+      client.emit('terminal-exit', { code });
+    });
+
+    client.emit('terminal-ready');
+  }
+
+  @SubscribeMessage('terminal-input')
+  handleTerminalInput(client: Socket, payload: { data: string }) {
+    const terminal = this.activeTerminals.get(client.id);
+    if (terminal && terminal.stdin && !terminal.stdin.destroyed) {
+      terminal.stdin.write(payload.data);
+    }
+  }
+
+  @SubscribeMessage('terminal-resize')
+  handleTerminalResize(client: Socket, payload: { cols: number; rows: number }) {
+    // For spawn-based terminals, resize isn't directly supported
+    // but we handle it for when we upgrade to node-pty
+    const terminal = this.activeTerminals.get(client.id);
+    if (terminal && 'resize' in terminal) {
+      (terminal as any).resize(payload.cols, payload.rows);
+    }
+  }
+
+  @SubscribeMessage('terminal-stop')
+  handleTerminalStop(client: Socket) {
+    this.killTerminal(client.id);
+  }
+
+  // ─── Cleanup ──────────────────────────────────────
+
   handleDisconnect(client: Socket) {
     this.killStream(client.id);
+    this.killTerminal(client.id);
   }
 
   private killStream(clientId: string) {
@@ -87,6 +168,14 @@ export class LogsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (child) {
       child.kill();
       this.activeStreams.delete(clientId);
+    }
+  }
+
+  private killTerminal(clientId: string) {
+    const child = this.activeTerminals.get(clientId);
+    if (child) {
+      child.kill();
+      this.activeTerminals.delete(clientId);
     }
   }
 

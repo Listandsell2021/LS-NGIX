@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Rocket, Play, Square, RotateCcw, Activity, Globe, Lock, Plus, X } from 'lucide-react';
+import { ArrowLeft, Trash2, Rocket, Play, Square, RotateCcw, Activity, Globe, Lock, Plus, X, TerminalSquare } from 'lucide-react';
 import api from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 import TerminalOutput from '../components/TerminalOutput';
 import EnvEditor from '../components/EnvEditor';
+import WebTerminal from '../components/WebTerminal';
 
 interface App {
   id: string;
@@ -70,7 +71,7 @@ export default function AppDetail() {
   const [enablingSsl, setEnablingSsl] = useState<number | null>(null);
 
   // Active tab
-  const [tab, setTab] = useState<'deployments' | 'logs' | 'env' | 'domains'>('deployments');
+  const [tab, setTab] = useState<'deployments' | 'domains' | 'logs' | 'env' | 'terminal'>('deployments');
 
   async function fetchApp() {
     try {
@@ -318,20 +319,21 @@ export default function AppDetail() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4 border-b border-gray-800">
-        {(['deployments', 'domains', 'logs', 'env'] as const).map((t) => (
+        {(['deployments', 'domains', 'terminal', 'logs', 'env'] as const).map((t) => (
           <button
             key={t}
             onClick={() => {
               setTab(t);
               if (t === 'logs' && !processLogs) fetchPm2Logs();
             }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
               tab === t
                 ? 'border-blue-500 text-white'
                 : 'border-transparent text-gray-500 hover:text-gray-300'
             }`}
           >
-            {t === 'deployments' ? 'Deployments' : t === 'domains' ? 'Domains' : t === 'logs' ? 'PM2 Logs' : 'Environment'}
+            {t === 'terminal' && <TerminalSquare size={14} />}
+            {t === 'deployments' ? 'Deployments' : t === 'domains' ? 'Domains' : t === 'terminal' ? 'Terminal' : t === 'logs' ? 'PM2 Logs' : 'Environment'}
           </button>
         ))}
       </div>
@@ -478,6 +480,14 @@ export default function AppDetail() {
             <p>3. Click <span className="text-green-400">Enable SSL</span> to get a free Let's Encrypt HTTPS certificate</p>
             <p>4. Your app is now live at <span className="text-white">https://yourdomain.com</span></p>
           </div>
+        </div>
+      )}
+
+      {/* Terminal Tab */}
+      {tab === 'terminal' && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <h3 className="text-lg font-semibold mb-4">Web Terminal</h3>
+          <WebTerminal appSlug={app.slug} />
         </div>
       )}
 
