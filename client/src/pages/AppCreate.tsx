@@ -1,11 +1,17 @@
-import { useState, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, FormEvent } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/client';
+
+interface SshKeyOption {
+  id: number;
+  name: string;
+}
 
 export default function AppCreate() {
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sshKeys, setSshKeys] = useState<SshKeyOption[]>([]);
   const [form, setForm] = useState({
     name: '',
     slug: '',
@@ -15,7 +21,12 @@ export default function AppCreate() {
     buildCommand: 'npm run build',
     startCommand: 'npm run start:prod',
     port: 3001,
+    sshKeyId: '' as string | number,
   });
+
+  useEffect(() => {
+    api.get('/ssh-keys').then(({ data }) => setSshKeys(data)).catch(() => {});
+  }, []);
 
   function updateField(field: string, value: string | number) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -33,7 +44,13 @@ export default function AppCreate() {
     setError('');
     setLoading(true);
     try {
-      const { data } = await api.post('/apps', { ...form, port: Number(form.port) });
+      const payload: Record<string, unknown> = { ...form, port: Number(form.port) };
+      if (!payload.sshKeyId) {
+        delete payload.sshKeyId;
+      } else {
+        payload.sshKeyId = Number(payload.sshKeyId);
+      }
+      const { data } = await api.post('/apps', payload);
       navigate(`/apps/${data.id}`);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create app');
@@ -75,6 +92,22 @@ export default function AppCreate() {
           <label className="block text-sm text-gray-300 mb-1">Port</label>
           <input type="number" value={form.port} onChange={(e) => updateField('port', e.target.value)} min={1024} max={65535} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500" required />
           <p className="text-xs text-gray-500 mt-1">The port your app listens on (1024-65535)</p>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-300 mb-1">SSH Deploy Key</label>
+          <select
+            value={form.sshKeyId}
+            onChange={(e) => updateField('sshKeyId', e.target.value)}
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+          >
+            <option value="">None — public repo</option>
+            {sshKeys.map((k) => (
+              <option key={k.id} value={k.id}>{k.name}</option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Required for private repos. <Link to="/ssh-keys" className="text-blue-400 hover:text-blue-300">Manage SSH keys</Link>
+          </p>
         </div>
         <details className="group">
           <summary className="text-sm text-gray-400 cursor-pointer hover:text-gray-300">Advanced: Custom Commands</summary>

@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import AppCreate from './pages/AppCreate';
 import AppDetail from './pages/AppDetail';
 import AuditLog from './pages/AuditLog';
+import SshKeys from './pages/SshKeys';
 
 function App() {
   const { isAuthenticated, isLoading, setupRequired, login, setup, logout } = useAuth();
@@ -29,6 +30,7 @@ function App() {
         <Route path="/apps/new" element={<AppCreate />} />
         <Route path="/apps/:id" element={<AppDetail />} />
         <Route path="/audit" element={<AuditLog />} />
+        <Route path="/ssh-keys" element={<SshKeys />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

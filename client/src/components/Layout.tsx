@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Plus, LogOut, Shield } from 'lucide-react';
+import { LayoutDashboard, Plus, LogOut, Shield, Key } from 'lucide-react';
 
 interface LayoutProps {
   onLogout: () => void;
@@ -8,6 +8,7 @@ interface LayoutProps {
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/apps/new', label: 'New App', icon: Plus },
+  { to: '/ssh-keys', label: 'SSH Keys', icon: Key },
   { to: '/audit', label: 'Audit Log', icon: Shield },
 ];
 

@@ -9,8 +9,8 @@ export class UpdateAppDto {
 
   @IsString()
   @IsOptional()
-  @Matches(/^(https:\/\/|git@)[\w.@:\/~-]+\.git$/, {
-    message: 'Git URL must be a valid HTTPS or SSH git URL ending in .git',
+  @Matches(/^(https:\/\/|git@)[\w.@:\/~-]+$/, {
+    message: 'Git URL must be a valid HTTPS or SSH git URL',
   })
   gitUrl?: string;
 
@@ -39,4 +39,8 @@ export class UpdateAppDto {
   @Max(65535)
   @IsOptional()
   port?: number;
+
+  @IsInt()
+  @IsOptional()
+  sshKeyId?: number;
 }

@@ -7,6 +7,7 @@ import { Deployment, DeploymentStatus } from './entities/deployment.entity';
 import { AppsService } from '../apps/apps.service';
 import { AppStatus } from '../apps/entities/app.entity';
 import { safeSpawn, safeExec } from '../common/utils/safe-exec';
+import { SshKeysService } from '../ssh-keys/ssh-keys.service';
 
 @Injectable()
 export class DeploymentsService {
@@ -17,6 +18,7 @@ export class DeploymentsService {
     @InjectRepository(Deployment)
     private readonly deployRepo: Repository<Deployment>,
     private readonly appsService: AppsService,
+    private readonly sshKeysService: SshKeysService,
   ) {
     this.appsDir = process.env.APPS_DIR || join(__dirname, '..', '..', 'managed-apps');
     if (!existsSync(this.appsDir)) {
@@ -41,7 +43,19 @@ export class DeploymentsService {
     const app = await this.appsService.findOne(appId);
     const appDir = join(this.appsDir, app.slug, 'source');
 
+    let keyPath: string | null = null;
+    let gitEnv: NodeJS.ProcessEnv = { ...process.env };
+
     try {
+      // Set up SSH key environment if configured
+      if (app.sshKeyId) {
+        keyPath = await this.sshKeysService.writeKeyToTempFile(app.sshKeyId);
+        gitEnv = {
+          ...process.env,
+          GIT_SSH_COMMAND: `ssh -i ${keyPath} -o StrictHostKeyChecking=no`,
+        };
+      }
+
       // Clone or pull
       await this.updateStatus(deploymentId, DeploymentStatus.CLONING);
       await this.appsService.updateStatus(appId, AppStatus.BUILDING);
@@ -50,11 +64,13 @@ export class DeploymentsService {
         await this.appendLog(deploymentId, '> git fetch origin\n');
         await safeSpawn('git', ['fetch', 'origin'], {
           cwd: appDir,
+          env: gitEnv,
           onOutput: (line) => this.appendLog(deploymentId, line),
         });
         await this.appendLog(deploymentId, `> git reset --hard origin/${app.gitBranch}\n`);
         await safeSpawn('git', ['reset', '--hard', `origin/${app.gitBranch}`], {
           cwd: appDir,
+          env: gitEnv,
           onOutput: (line) => this.appendLog(deploymentId, line),
         });
       } else {
@@ -63,6 +79,7 @@ export class DeploymentsService {
         await this.appendLog(deploymentId, `> git clone ${app.gitUrl} -b ${app.gitBranch}\n`);
         await safeSpawn('git', ['clone', app.gitUrl, '-b', app.gitBranch, appDir], {
           cwd: this.appsDir,
+          env: gitEnv,
           onOutput: (line) => this.appendLog(deploymentId, line),
         });
       }
@@ -120,6 +137,10 @@ export class DeploymentsService {
       await this.updateStatus(deploymentId, DeploymentStatus.FAILED);
       await this.appsService.updateStatus(appId, AppStatus.ERRORED);
       await this.deployRepo.update(deploymentId, { finishedAt: new Date() });
+    } finally {
+      if (keyPath) {
+        try { require('fs').unlinkSync(keyPath); } catch {}
+      }
     }
   }
 

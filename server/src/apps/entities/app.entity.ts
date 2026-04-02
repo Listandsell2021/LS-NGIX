@@ -45,6 +45,9 @@ export class App {
   @Column({ type: 'varchar', default: AppStatus.STOPPED })
   status: AppStatus;
 
+  @Column({ nullable: true })
+  sshKeyId: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

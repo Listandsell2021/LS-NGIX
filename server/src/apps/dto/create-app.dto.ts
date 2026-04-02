@@ -13,8 +13,8 @@ export class CreateAppDto {
   slug: string;
 
   @IsString()
-  @Matches(/^(https:\/\/|git@)[\w.@:\/~-]+\.git$/, {
-    message: 'Git URL must be a valid HTTPS or SSH git URL ending in .git',
+  @Matches(/^(https:\/\/|git@)[\w.@:\/~-]+$/, {
+    message: 'Git URL must be a valid HTTPS or SSH git URL',
   })
   gitUrl: string;
 
@@ -44,4 +44,8 @@ export class CreateAppDto {
   @Min(1024)
   @Max(65535)
   port: number;
+
+  @IsInt()
+  @IsOptional()
+  sshKeyId?: number;
 }

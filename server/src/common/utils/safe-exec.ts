@@ -18,6 +18,7 @@ const ALLOWED_COMMANDS = new Set([
   'rm',
   'df',
   'pm2',
+  'ssh-keygen',
 ]);
 
 export interface ExecResult {
@@ -34,7 +35,7 @@ export interface ExecResult {
 export function safeExec(
   command: string,
   args: string[],
-  options: { cwd?: string; timeout?: number; sudo?: boolean } = {},
+  options: { cwd?: string; timeout?: number; sudo?: boolean; env?: NodeJS.ProcessEnv } = {},
 ): Promise<ExecResult> {
   const baseCmd = command.split('/').pop() || command;
 
@@ -55,7 +56,7 @@ export function safeExec(
         cwd: options.cwd,
         timeout: options.timeout || 300_000, // 5 min default
         maxBuffer: 10 * 1024 * 1024, // 10MB
-        env: { ...process.env },
+        env: options.env || { ...process.env },
       },
       (error: ExecFileException | null, stdout: string, stderr: string) => {
         const code = error?.code ? Number(error.code) : 0;
@@ -81,6 +82,7 @@ export function safeSpawn(
     timeout?: number;
     onOutput?: (data: string) => void;
     ignoreErrors?: boolean;
+    env?: NodeJS.ProcessEnv;
   } = {},
 ): Promise<void> {
   const baseCmd = command.split('/').pop() || command;
@@ -93,7 +95,7 @@ export function safeSpawn(
     const child = spawn(command, args, {
       cwd: options.cwd,
       timeout: options.timeout || 300_000,
-      env: { ...process.env },
+      env: options.env || { ...process.env },
     });
 
     child.stdout.on('data', (data: Buffer) => {
