@@ -12,6 +12,7 @@ import { AuthService } from '../auth/auth.service';
 import { ChildProcess, spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { join } from 'path';
+import * as pty from 'node-pty';
 
 @WebSocketGateway({
   cors: { origin: '*' },
@@ -23,7 +24,7 @@ export class LogsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly logger = new Logger(LogsGateway.name);
   private activeStreams = new Map<string, ChildProcess>();
-  private activeTerminals = new Map<string, ChildProcess>();
+  private activeTerminals = new Map<string, pty.IPty>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -104,30 +105,23 @@ export class LogsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const cols = payload.cols || 80;
     const rows = payload.rows || 24;
 
-    const child = spawn(shell, ['-l'], {
+    const term = pty.spawn(shell, ['-l'], {
+      name: 'xterm-256color',
+      cols,
+      rows,
       cwd,
-      env: {
-        ...process.env,
-        TERM: 'xterm-256color',
-        COLUMNS: String(cols),
-        LINES: String(rows),
-      },
-      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env } as Record<string, string>,
     });
 
-    this.activeTerminals.set(client.id, child);
+    this.activeTerminals.set(client.id, term);
 
-    child.stdout.on('data', (data: Buffer) => {
-      client.emit('terminal-output', data.toString());
+    term.onData((data: string) => {
+      client.emit('terminal-output', data);
     });
 
-    child.stderr.on('data', (data: Buffer) => {
-      client.emit('terminal-output', data.toString());
-    });
-
-    child.on('close', (code) => {
+    term.onExit(({ exitCode }) => {
       this.activeTerminals.delete(client.id);
-      client.emit('terminal-exit', { code });
+      client.emit('terminal-exit', { code: exitCode });
     });
 
     client.emit('terminal-ready');
@@ -136,18 +130,16 @@ export class LogsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('terminal-input')
   handleTerminalInput(client: Socket, payload: { data: string }) {
     const terminal = this.activeTerminals.get(client.id);
-    if (terminal && terminal.stdin && !terminal.stdin.destroyed) {
-      terminal.stdin.write(payload.data);
+    if (terminal) {
+      terminal.write(payload.data);
     }
   }
 
   @SubscribeMessage('terminal-resize')
   handleTerminalResize(client: Socket, payload: { cols: number; rows: number }) {
-    // For spawn-based terminals, resize isn't directly supported
-    // but we handle it for when we upgrade to node-pty
     const terminal = this.activeTerminals.get(client.id);
-    if (terminal && 'resize' in terminal) {
-      (terminal as any).resize(payload.cols, payload.rows);
+    if (terminal) {
+      terminal.resize(payload.cols, payload.rows);
     }
   }
 
@@ -172,9 +164,9 @@ export class LogsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private killTerminal(clientId: string) {
-    const child = this.activeTerminals.get(clientId);
-    if (child) {
-      child.kill();
+    const term = this.activeTerminals.get(clientId);
+    if (term) {
+      term.kill();
       this.activeTerminals.delete(clientId);
     }
   }
