@@ -5,6 +5,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { join } from 'path';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
+import { AppsModule } from './apps/apps.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AuthModule } from './auth/auth.module';
     }]),
     AuditModule,
     AuthModule,
+    AppsModule,
   ],
   providers: [
     {
