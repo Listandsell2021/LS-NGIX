@@ -90,10 +90,12 @@ echo "[8/9] Installing LS-NGIX Panel..."
 INSTALL_DIR="/opt/ls-ngix"
 mkdir -p "$INSTALL_DIR/apps"
 
-if [ -d "$INSTALL_DIR/panel" ]; then
+if [ -d "$INSTALL_DIR/panel/.git" ]; then
   echo "  Updating existing installation..."
+  git config --global --add safe.directory "$INSTALL_DIR/panel"
   cd "$INSTALL_DIR/panel" && git pull
 else
+  rm -rf "$INSTALL_DIR/panel"
   git clone https://github.com/Listandsell2021/LS-NGIX.git "$INSTALL_DIR/panel"
 fi
 
